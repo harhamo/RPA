@@ -6,6 +6,8 @@ from RPA.Tables import Tables
 from RPA.PDF import PDF
 from RPA.Archive import Archive
 from RPA.FileSystem import FileSystem
+from RPA.Assistant import Assistant
+
 
 @task
 def order_robots_from_RobotSpareBin():
@@ -18,7 +20,8 @@ def order_robots_from_RobotSpareBin():
     """
     browser.configure(slowmo=100,)
 
-    open_robot_order_website()
+    #open_robot_order_website()
+    user_input_task()
     close_annoying_modal()
     orders = get_orders()
     fill_the_form(orders)
@@ -31,11 +34,23 @@ def order_robots_from_RobotSpareBin():
     archive_receipts()
     clean_screenshots()
 
-def open_robot_order_website():
+def user_input_task():
+    """
+    Takes website URL from user and passes it to open_robot_order_website()
+    """
+    assistant = Assistant()
+    assistant.add_heading("Input from user")
+    assistant.add_text_input("text_input", placeholder="Please enter URL")
+    assistant.add_submit_buttons("Submit", default="Submit")
+    result = assistant.run_dialog()
+    url = result.text_input
+    open_robot_order_website(url)
+
+def open_robot_order_website(url):
     """
     Opens the order website and clicks the OK button
     """
-    browser.goto("https://robotsparebinindustries.com/#/robot-order")
+    browser.goto(url)
 
 def close_annoying_modal():
     """
