@@ -8,6 +8,8 @@ from RPA.Archive import Archive
 from RPA.FileSystem import FileSystem
 from RPA.Assistant import Assistant
 
+page = browser.page()
+pdf = PDF()
 
 @task
 def order_robots_from_RobotSpareBin():
@@ -56,7 +58,6 @@ def close_annoying_modal():
     """
     Closes the modal window
     """
-    page = browser.page()
     page.click("button:text('OK')")
 
 def get_orders():
@@ -76,7 +77,6 @@ def fill_the_form(orders):
     Fills the form from argument data, makes order and checks for alert-danger
     """
     for row in orders:
-        page = browser.page()
         page.select_option("#head", str(row["Head"])) 
         page.locator(f"input[type='radio'][value='{row['Body']}']").click()
         page.get_by_placeholder("Enter the part number for the legs").fill(str(row["Legs"]))
@@ -101,23 +101,19 @@ def store_receipt_as_pdf(order_number):
     Makes a PDF of the receipt and stores the pdf to output/receipt/.
     filenime is order number
     """
-    page = browser.page()
     receipt_html = page.locator('.alert-success').inner_html()
-    pdf = PDF()
     pdf.html_to_pdf(receipt_html, f"output/receipt/{order_number}.pdf")
 
 def screenshot_robot(order_number):
     """
     Takes a screenshot from the receipt
     """
-    page = browser.page()
     page.screenshot(path=f"output/screenshots/{order_number}.png")
 
 def embed_screenshot_to_receipt(pdf_file, screenshot):
     """
     Embeds the screenshot to the receipt pdf
     """
-    pdf = PDF()
     list_of_files = [
         pdf_file,
         screenshot,
