@@ -27,8 +27,8 @@ def order_robots_from_RobotSpareBin():
     fill_the_form(orders)
 
     for row in orders:
-        pdf_file = f'output/receipt/{row["Order number"]}.pdf'
-        screenshot = f'output/screenshots/{row["Order number"]}.png'
+        pdf_file = f'{RECEIPTS_PATH}{row["Order number"]}.pdf'
+        screenshot = f'{SCREENSHOT_PATH}{row["Order number"]}.png'
         embed_screenshot_to_receipt(pdf_file, screenshot)
 
     archive_receipts()
@@ -97,7 +97,7 @@ def fill_the_form(orders):
         close_annoying_modal()
 
 def store_receipt_as_pdf(order_number):
-    """ Makes a PDF of the receipt and stores the pdf to output/receipt/. Filenime is order number"""
+    """ Makes a PDF of the receipt and stores the pdf to output/receipts/. Filenime is order number"""
     receipt_html = page.locator('.alert-success').inner_html()
     pdf.html_to_pdf(receipt_html, f"{RECEIPTS_PATH}{order_number}.pdf")
 
