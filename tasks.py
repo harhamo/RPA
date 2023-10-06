@@ -8,6 +8,13 @@ from RPA.Archive import Archive
 from RPA.FileSystem import FileSystem
 from RPA.Assistant import Assistant
 
+ROBOT_ORDER_WEBSITE_URL = "https://robotsparebinindustries.com/#/robot-order"
+ROBOT_ORDER_CSV_URL = "https://robotsparebinindustries.com/orders.csv"
+SCREENSHOT_PATH = "output/screenshots/"
+RECEIPTS_PATH = "output/receipts/"
+
+page = browser.page()
+pdf = PDF()
 
 @task
 def order_robots_from_RobotSpareBin():
@@ -18,10 +25,8 @@ def order_robots_from_RobotSpareBin():
     Embeds the screenshot of the robot to the PDF receipt.
     Creates ZIP archive of the receipts and the images.
     """
-    browser.configure(slowmo=100,)
-
-    #open_robot_order_website()
-    user_input_task()
+    open_robot_order_website(ROBOT_ORDER_WEBSITE_URL)
+    #user_input_task()
     close_annoying_modal()
     orders = get_orders()
     fill_the_form(orders)
@@ -35,9 +40,7 @@ def order_robots_from_RobotSpareBin():
     clean_screenshots()
 
 def user_input_task():
-    """
-    Takes website URL from user and passes it to open_robot_order_website()
-    """
+    """Takes website URL from user and passes it to open_robot_order_website()"""
     assistant = Assistant()
     assistant.add_heading("Input from user")
     assistant.add_text_input("text_input", placeholder="Please enter URL")
@@ -47,77 +50,68 @@ def user_input_task():
     open_robot_order_website(url)
 
 def open_robot_order_website(url):
-    """
-    Opens the order website and clicks the OK button
-    """
+    """Opens the order website and clicks the OK button"""
+    browser.configure(
+        slowmo=100,
+    )
     browser.goto(url)
 
 def close_annoying_modal():
-    """
-    Closes the modal window
-    """
-    page = browser.page()
-    page.click("button:text('OK')")
+    """Closes the modal window"""
+    page.get_by_role("button", name = "OK").click()
 
 def get_orders():
-    """
-    Downloads orders.csv, overwrite is set True and loops it into table and returns it
-    """
-    HTTP().download(url="https://robotsparebinindustries.com/orders.csv", overwrite=True)
+    """Downloads orders.csv, overwrite is set True and loops it into table and returns it"""
+    HTTP().download(url=ROBOT_ORDER_CSV_URL, overwrite=True)
 
     library = Tables()
+
     orders = library.read_table_from_csv(
-        "orders.csv", columns=["Order number","Head","Body","Legs","Address"]
+        "orders.csv", columns=[
+            "Order number",
+            "Head",
+            "Body",
+            "Legs",
+            "Address"
+            ]
     )
+
     return orders
 
 def fill_the_form(orders):
-    """
-    Fills the form from argument data, makes order and checks for alert-danger
-    """
+    """Fills the form from argument data, makes order and checks for alert-danger"""
     for row in orders:
-        page = browser.page()
-        page.select_option("#head", str(row["Head"])) 
+        order_number = row["Order number"]
+        page.get_by_label("1. Head:").select_option(str(row["Head"]))
         page.locator(f"input[type='radio'][value='{row['Body']}']").click()
         page.get_by_placeholder("Enter the part number for the legs").fill(str(row["Legs"]))
-        page.fill(f"#address", str(row["Address"]))
+        page.get_by_placeholder("Shipping address").fill(str(row["Address"]))
         page.locator("button#preview").click()
         page.locator("button#order").click()
-
         alert_danger = page.locator('.alert-danger').is_visible()
 
         while(alert_danger):
             page.locator("button#order").click()
             alert_danger = page.locator('.alert-danger').is_visible()
 
-        store_receipt_as_pdf(row["Order number"])
-        screenshot_robot(row["Order number"])
+        store_receipt_as_pdf(order_number)
+        screenshot_robot(order_number)
 
         page.locator("button#order-another").click()
+
         close_annoying_modal()
 
 def store_receipt_as_pdf(order_number):
-    """
-    Makes a PDF of the receipt and stores the pdf to output/receipt/.
-    filenime is order number
-    """
-    page = browser.page()
+    """ Makes a PDF of the receipt and stores the pdf to output/receipt/. Filenime is order number"""
     receipt_html = page.locator('.alert-success').inner_html()
-    pdf = PDF()
-    pdf.html_to_pdf(receipt_html, f"output/receipt/{order_number}.pdf")
+    pdf.html_to_pdf(receipt_html, f"{RECEIPTS_PATH}{order_number}.pdf")
 
 def screenshot_robot(order_number):
-    """
-    Takes a screenshot from the receipt
-    """
-    page = browser.page()
-    page.screenshot(path=f"output/screenshots/{order_number}.png")
+    """Takes a screenshot from the receipt and saves it"""
+    page.screenshot(path=f"{SCREENSHOT_PATH}{order_number}.png")
 
 def embed_screenshot_to_receipt(pdf_file, screenshot):
-    """
-    Embeds the screenshot to the receipt pdf
-    """
-    pdf = PDF()
+    """Embeds the screenshot to the receipt pdf"""
     list_of_files = [
         pdf_file,
         screenshot,
@@ -128,16 +122,12 @@ def embed_screenshot_to_receipt(pdf_file, screenshot):
     )
 
 def archive_receipts():
-    """
-    Makes an receipts.zip from receipt folder
-    """
+    """Makes an receipts.zip from receipt folder """
     lib = Archive()
-    lib.archive_folder_with_zip('output/receipt/', 'receipts.zip', include='*.pdf')
+    lib.archive_folder_with_zip(RECEIPTS_PATH, 'receipts.zip', include='*.pdf')
 
 def clean_screenshots():
-    """
-    Removes Screenshots
-    """
+    """Removes Screenshots"""
     file_system = FileSystem()
-    if file_system.does_directory_exist('output/screenshots/'):
-        file_system.empty_directory('output/screenshots')
+    if file_system.does_directory_exist(SCREENSHOT_PATH):
+        file_system.empty_directory(SCREENSHOT_PATH)
